@@ -1,0 +1,12 @@
+Database path: C:\Users\QUIKCARE COMPUTERS\Desktop\labourlink\labourlink\database\labourlink_db.json
+Total users count: 12
+Total customer_profiles count: 3
+Total contractor_profiles count: 3
+Total worker_profiles count: 5
+Total skills_taxonomy count: 11
+Generic SELECT parser correctly evaluated row 1 (second user) independently: SUCCESS
+Login lookup query can find users beyond the first record: SUCCESS
+Worker Auth Test (8000000001): SUCCESS
+Customer Auth Test (9000000101): SUCCESS
+Contractor Auth Test (9000000201): SUCCESS
+Skills taxonomy endpoint check simulation: SUCCESS (contains 11 records)

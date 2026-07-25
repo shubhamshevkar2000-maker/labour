@@ -1,0 +1,110 @@
+[
+  {
+    "id": "312f1a12-cb8d-4f7f-a0bd-1fffd9fce5e0",
+    "role": "ADMIN",
+    "full_name": "Aarav Sharma",
+    "phone": "9876543210",
+    "email": "admin@labourlink.com",
+    "created_at": "2026-06-12T15:13:32.747Z",
+    "updated_at": "2026-06-12T15:13:32.747Z"
+  },
+  {
+    "id": "26174119-c22f-438a-b3c8-d665d4263fde",
+    "role": "CUSTOMER",
+    "full_name": "Amit Roy",
+    "phone": "9000000101",
+    "email": "amit.roy@labourlink.com",
+    "created_at": "2026-06-12T15:13:32.749Z",
+    "updated_at": "2026-06-12T15:13:32.749Z"
+  },
+  {
+    "id": "df5ef10e-f6a1-44d6-9eba-b2305933a96b",
+    "role": "CUSTOMER",
+    "full_name": "Vijay Patel",
+    "phone": "9000000102",
+    "email": "vijay.patel@labourlink.com",
+    "created_at": "2026-06-12T15:13:32.752Z",
+    "updated_at": "2026-06-12T15:13:32.752Z"
+  },
+  {
+    "id": "3cf0e66c-24ab-48fd-a477-76544ffbb2ef",
+    "role": "CUSTOMER",
+    "full_name": "Priya Sharma",
+    "phone": "9000000103",
+    "email": "priya.sharma@labourlink.com",
+    "created_at": "2026-06-12T15:13:32.755Z",
+    "updated_at": "2026-06-12T15:13:32.755Z"
+  },
+  {
+    "id": "a2e8029f-f05d-429e-b41e-30107930a178",
+    "role": "CONTRACTOR",
+    "full_name": "Suresh Buildmax",
+    "phone": "9000000201",
+    "email": "buildmax@labourlink.com",
+    "created_at": "2026-06-12T15:13:32.759Z",
+    "updated_at": "2026-06-12T15:13:32.760Z"
+  },
+  {
+    "id": "2bfb254c-da1a-408a-a133-cb48254e9168",
+    "role": "CONTRACTOR",
+    "full_name": "Urban Works",
+    "phone": "9000000202",
+    "email": "urbanworks@labourlink.com",
+    "created_at": "2026-06-12T15:13:32.763Z",
+    "updated_at": "2026-06-12T15:13:32.763Z"
+  },
+  {
+    "id": "6663dfad-9bef-4d16-a89f-3c4ceefff02a",
+    "role": "CONTRACTOR",
+    "full_name": "Skyline Infra",
+    "phone": "9000000203",
+    "email": "skylineinfra@labourlink.com",
+    "created_at": "2026-06-12T15:13:32.766Z",
+    "updated_at": "2026-06-12T15:13:32.766Z"
+  },
+  {
+    "id": "5d9ddc0f-982e-4669-ac61-58702510bd1c",
+    "role": "WORKER",
+    "full_name": "Ramesh Prasad",
+    "phone": "8000000001",
+    "email": "ramesh.worker@labourlink.com",
+    "created_at": "2026-06-12T15:13:32.770Z",
+    "updated_at": "2026-06-12T15:13:32.770Z"
+  },
+  {
+    "id": "da1fd464-be5e-4662-a2bc-732093ebd8cb",
+    "role": "WORKER",
+    "full_name": "Suresh Kumar",
+    "phone": "8000000002",
+    "email": "suresh.worker@labourlink.com",
+    "created_at": "2026-06-12T15:13:32.785Z",
+    "updated_at": "2026-06-12T15:13:32.785Z"
+  },
+  {
+    "id": "96b65021-eff3-49f7-9892-dfeaae000581",
+    "role": "WORKER",
+    "full_name": "Akash Verma",
+    "phone": "8000000003",
+    "email": "akash.worker@labourlink.com",
+    "created_at": "2026-06-12T15:13:32.799Z",
+    "updated_at": "2026-06-12T15:13:32.799Z"
+  },
+  {
+    "id": "d39c6076-6b2c-4a87-86df-7d24c1c8062b",
+    "role": "WORKER",
+    "full_name": "Imran Khan",
+    "phone": "8000000004",
+    "email": "imran.worker@labourlink.com",
+    "created_at": "2026-06-12T15:13:32.814Z",
+    "updated_at": "2026-06-12T15:13:32.814Z"
+  },
+  {
+    "id": "ca807ce6-5063-4742-8533-b643d4d5d8cf",
+    "role": "WORKER",
+    "full_name": "Vikas Singh",
+    "phone": "8000000005",
+    "email": "vikas.worker@labourlink.com",
+    "created_at": "2026-06-12T15:13:32.827Z",
+    "updated_at": "2026-06-12T15:13:32.827Z"
+  }
+]

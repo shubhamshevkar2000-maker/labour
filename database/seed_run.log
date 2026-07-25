@@ -1,0 +1,83 @@
+[2026-07-12T15:13:32.552Z] Starting database seeding...
+[2026-07-12T15:13:32.554Z] labourlink_db.json being written: C:\Users\QUIKCARE COMPUTERS\OneDrive\Desktop\labourlink\database\labourlink_db.json
+[2026-07-12T15:13:32.555Z] labourlink_db.json being read by the API: C:\Users\QUIKCARE COMPUTERS\OneDrive\Desktop\labourlink\database\labourlink_db.json
+[2026-07-12T15:13:32.556Z] Database path being used: C:\Users\QUIKCARE COMPUTERS\OneDrive\Desktop\labourlink\database\labourlink_db.json
+[2026-07-12T15:13:32.563Z] Current user count before seeding: 0
+[2026-07-12T15:13:32.563Z] Seed started
+[2026-07-12T15:13:32.564Z] Clearing old database records...
+[2026-07-12T15:13:32.608Z] Database cleared.
+[2026-07-12T15:13:32.746Z] Skills inserted
+[2026-07-12T15:13:32.759Z] Customers inserted
+[2026-07-12T15:13:32.770Z] Contractors inserted
+[2026-07-12T15:13:32.841Z] Workers inserted
+[2026-07-12T15:13:32.879Z] Force saving database to disk...
+[2026-07-12T15:13:32.880Z] Reloading database from disk...
+[2026-07-12T15:13:32.884Z] Database reload validation passed. Seeded users verified.
+[2026-07-12T15:13:32.889Z] 
+=========================================
+[2026-07-12T15:13:32.890Z]           POST-SEEDING REPORT            
+[2026-07-12T15:13:32.890Z] =========================================
+[2026-07-12T15:13:32.891Z] User count after seeding: 12
+[2026-07-12T15:13:32.892Z] Worker count: 5
+[2026-07-12T15:13:32.892Z] Customer count: 3
+[2026-07-12T15:13:32.893Z] Contractor count: 3
+[2026-07-12T15:13:32.894Z] Skills taxonomy count: 11
+[2026-07-12T15:13:32.895Z] =========================================
+
+[2026-07-12T15:13:32.895Z] Verifying login credentials compatibility...
+[2026-07-12T15:13:33.718Z] All login credentials successfully verified via the API logic.
+[2026-07-12T15:13:33.719Z] 
+=========================================
+[2026-07-12T15:13:33.720Z]             DEMO CREDENTIALS             
+[2026-07-12T15:13:33.721Z] =========================================
+[2026-07-12T15:13:33.722Z] 
+ADMIN
+[2026-07-12T15:13:33.722Z] Email: [admin@labourlink.com](mailto:admin@labourlink.com)
+[2026-07-12T15:13:33.723Z] Password: password123
+[2026-07-12T15:13:33.724Z] 
+CUSTOMER
+[2026-07-12T15:13:33.725Z] Email: [amit.roy@labourlink.com](mailto:amit.roy@labourlink.com)
+[2026-07-12T15:13:33.725Z] Password: password123
+[2026-07-12T15:13:33.726Z] 
+CUSTOMER
+[2026-07-12T15:13:33.727Z] Email: [vijay.patel@labourlink.com](mailto:vijay.patel@labourlink.com)
+[2026-07-12T15:13:33.728Z] Password: password123
+[2026-07-12T15:13:33.728Z] 
+CUSTOMER
+[2026-07-12T15:13:33.729Z] Email: [priya.sharma@labourlink.com](mailto:priya.sharma@labourlink.com)
+[2026-07-12T15:13:33.730Z] Password: password123
+[2026-07-12T15:13:33.730Z] 
+WORKER
+[2026-07-12T15:13:33.731Z] Email: [ramesh.worker@labourlink.com](mailto:ramesh.worker@labourlink.com)
+[2026-07-12T15:13:33.732Z] Password: password123
+[2026-07-12T15:13:33.733Z] 
+WORKER
+[2026-07-12T15:13:33.734Z] Email: [suresh.worker@labourlink.com](mailto:suresh.worker@labourlink.com)
+[2026-07-12T15:13:33.735Z] Password: password123
+[2026-07-12T15:13:33.736Z] 
+WORKER
+[2026-07-12T15:13:33.736Z] Email: [akash.worker@labourlink.com](mailto:akash.worker@labourlink.com)
+[2026-07-12T15:13:33.737Z] Password: password123
+[2026-07-12T15:13:33.738Z] 
+WORKER
+[2026-07-12T15:13:33.739Z] Email: [imran.worker@labourlink.com](mailto:imran.worker@labourlink.com)
+[2026-07-12T15:13:33.740Z] Password: password123
+[2026-07-12T15:13:33.740Z] 
+WORKER
+[2026-07-12T15:13:33.741Z] Email: [vikas.worker@labourlink.com](mailto:vikas.worker@labourlink.com)
+[2026-07-12T15:13:33.742Z] Password: password123
+[2026-07-12T15:13:33.743Z] 
+CONTRACTOR
+[2026-07-12T15:13:33.743Z] Email: [buildmax@labourlink.com](mailto:buildmax@labourlink.com)
+[2026-07-12T15:13:33.744Z] Password: password123
+[2026-07-12T15:13:33.745Z] 
+CONTRACTOR
+[2026-07-12T15:13:33.745Z] Email: [urbanworks@labourlink.com](mailto:urbanworks@labourlink.com)
+[2026-07-12T15:13:33.746Z] Password: password123
+[2026-07-12T15:13:33.747Z] 
+CONTRACTOR
+[2026-07-12T15:13:33.748Z] Email: [skylineinfra@labourlink.com](mailto:skylineinfra@labourlink.com)
+[2026-07-12T15:13:33.749Z] Password: password123
+[2026-07-12T15:13:33.749Z] =========================================
+
+[2026-07-12T15:13:33.750Z] Seed completed successfully

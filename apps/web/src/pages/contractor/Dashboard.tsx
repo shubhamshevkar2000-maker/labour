@@ -1,0 +1,1141 @@
+import React, { useState, useEffect } from 'react';
+import { User } from 'shared-types';
+import { 
+  Building, 
+  Briefcase, 
+  Home, 
+  CreditCard, 
+  Users, 
+  ChevronLeft, 
+  ChevronRight,
+  Award,
+  AlertTriangle
+} from 'lucide-react';
+import ActivityTimeline from '../../components/ActivityTimeline';
+
+interface ContractorDashboardProps {
+  user: User;
+  profileId: string;
+  onLogout: () => void;
+}
+
+interface Project {
+  id: string;
+  customer_id: string;
+  customer_name: string;
+  status: string;
+  scheduled_start: string;
+  requirement_text: string;
+  payment_amount: number | null;
+  payment_status: string | null;
+}
+
+interface WorkerInfo {
+  id: string;
+  user_id: string;
+  full_name: string;
+  skills: string[];
+  trust_score: number;
+}
+
+interface ToastMsg {
+  id: string;
+  type: 'SUCCESS' | 'ERROR' | 'WARNING' | 'INFO';
+  message: string;
+}
+
+export const ContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, profileId, onLogout }) => {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectAssignments, setProjectAssignments] = useState<{ [projectId: string]: any[] }>({});
+  
+  // Worker Search states for assignment
+  const [assigningProjectId, setAssigningProjectId] = useState<string | null>(null);
+  const [searchSkill, setSearchSkill] = useState<string>('mason');
+  const [workers, setWorkers] = useState<WorkerInfo[]>([]);
+  const [searching, setSearching] = useState<boolean>(false);
+  const [assigningWorkerId, setAssigningWorkerId] = useState<string | null>(null);
+
+  // Endorsement form states
+  const [endorseWorkerId, setEndorseWorkerId] = useState<string>('');
+  const [endorseSkill, setEndorseSkill] = useState<string>('mason');
+  const [endorseComment, setEndorseComment] = useState<string>('');
+  const [submittingEndorsement, setSubmittingEndorsement] = useState<boolean>(false);
+
+  // Engagement & Negotiation States
+  const [engagements, setEngagements] = useState<any[]>([]);
+  const [counterProposalAmount, setCounterProposalAmount] = useState<{ [engagementId: string]: string }>({});
+
+  // Modals / Overlays
+  const [payingProject, setPayingProject] = useState<any | null>(null);
+  const [payAmount, setPayAmount] = useState<string>('1500');
+  const [payMethod, setPayMethod] = useState<'UPI_VERIFIED' | 'CASH_ATTESTED' | 'BANK_VERIFIED'>('UPI_VERIFIED');
+
+  const [ratingProject, setRatingProject] = useState<any | null>(null);
+  const [ratingScore, setRatingScore] = useState<number>(5);
+  const [ratingComment, setRatingComment] = useState<string>('');
+
+  // Local Page Navigation state
+  const [currentPage, setCurrentPage] = useState<'dashboard' | 'projects' | 'workers' | 'payments' | 'profile'>('dashboard');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 768);
+
+  const [loading, setLoading] = useState<boolean>(true);
+  const [toasts, setToasts] = useState<ToastMsg[]>([]);
+  const [actionPending, setActionPending] = useState<boolean>(false);
+
+  useEffect(() => {
+    fetchProjects();
+    fetchEngagements();
+  }, [profileId]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const showToast = (message: string, type: 'SUCCESS' | 'ERROR' | 'WARNING' | 'INFO' = 'SUCCESS') => {
+    if (toasts.some(t => t.message === message)) return;
+    const id = Math.random().toString();
+    setToasts(prev => [...prev, { id, type, message }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 3000);
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const res = await fetch(`/api/bookings?userId=${profileId}&role=CONTRACTOR`);
+      if (res.ok) {
+        const data = await res.json();
+        setProjects(data);
+        data.forEach((p: any) => {
+          fetchProjectAssignments(p.id);
+        });
+      }
+    } catch (err: any) {
+      showToast(err.message, 'ERROR');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProjectAssignments = async (projectId: string) => {
+    try {
+      const res = await fetch(`/api/bookings/${projectId}/assignments`);
+      if (res.ok) {
+        const data = await res.json();
+        setProjectAssignments(prev => ({ ...prev, [projectId]: data }));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchEngagements = async () => {
+    try {
+      const res = await fetch(`/api/engagements?userId=${user.id}&role=CONTRACTOR`);
+      if (res.ok) {
+        const data = await res.json();
+        setEngagements(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleProposePriceOffer = async (engagementId: string) => {
+    if (actionPending) return;
+    const amountStr = counterProposalAmount[engagementId];
+    if (!amountStr || isNaN(parseFloat(amountStr))) {
+      showToast('Please enter a valid counter-offer price.', 'WARNING');
+      return;
+    }
+
+    setActionPending(true);
+    try {
+      const res = await fetch(`/api/engagements/${engagementId}/propose`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          offered_by: user.id,
+          amount: parseFloat(amountStr),
+          note: 'Contractor Counter Proposal'
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to submit price offer.');
+      showToast('Counter offer proposed successfully!', 'SUCCESS');
+      setCounterProposalAmount(prev => ({ ...prev, [engagementId]: '' }));
+      fetchEngagements();
+    } catch (err: any) {
+      showToast(err.message, 'ERROR');
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const handleRespondToProposal = async (engagementId: string, response: 'ACCEPTED' | 'REJECTED') => {
+    if (actionPending) return;
+    setActionPending(true);
+    try {
+      const res = await fetch(`/api/engagements/${engagementId}/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ response })
+      });
+
+      if (!res.ok) throw new Error('Failed to submit response.');
+      showToast(`Proposal ${response.toLowerCase()} successfully!`, 'SUCCESS');
+      fetchEngagements();
+    } catch (err: any) {
+      showToast(err.message, 'ERROR');
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const handleUpdateEngagementStatus = async (engagementId: string, status: string) => {
+    if (actionPending) return;
+    setActionPending(true);
+    try {
+      const res = await fetch(`/api/engagements/${engagementId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+
+      if (!res.ok) throw new Error('Failed to update status.');
+      showToast(`Status updated to ${status}!`, 'SUCCESS');
+      fetchEngagements();
+    } catch (err: any) {
+      showToast(err.message, 'ERROR');
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const handleStaffWorker = async (workerId: string) => {
+    if (!assigningProjectId || actionPending) return;
+    setActionPending(true);
+    try {
+      const parentEng = engagements.find(e => e.id === assigningProjectId);
+      if (!parentEng) {
+        throw new Error('Parent engagement not found.');
+      }
+
+      const res = await fetch(`/api/requests/${parentEng.request_id}/engage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'DIRECT_WORKER',
+          initiator_id: user.id,
+          counterparty_id: workerId,
+          parent_engagement_id: parentEng.id,
+          initial_amount: 500,
+          note: `Staff assignment by Contractor ${user.full_name}`
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to staff worker');
+      }
+
+      showToast('Worker staffing invitation sent successfully!', 'SUCCESS');
+      setWorkers([]);
+      setAssigningProjectId(null);
+      fetchEngagements();
+    } catch (err: any) {
+      showToast(err.message, 'ERROR');
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const handleAcceptProject = async (projectId: string) => {
+    if (actionPending) return;
+    setActionPending(true);
+    try {
+      const res = await fetch(`/api/bookings/${projectId}/accept`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to accept project');
+      showToast('Project accepted successfully!', 'SUCCESS');
+      fetchProjects();
+    } catch (err: any) {
+      showToast(err.message, 'ERROR');
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const handleStartProject = async (projectId: string) => {
+    if (actionPending) return;
+    setActionPending(true);
+    try {
+      const res = await fetch(`/api/bookings/${projectId}/start`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to start project');
+      showToast('Project is now IN_PROGRESS!', 'SUCCESS');
+      fetchProjects();
+    } catch (err: any) {
+      showToast(err.message, 'ERROR');
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const handleCompleteProject = async (projectId: string) => {
+    if (actionPending) return;
+    setActionPending(true);
+    try {
+      const res = await fetch(`/api/bookings/${projectId}/complete`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to complete project');
+      showToast('Project marked as COMPLETED!', 'SUCCESS');
+      fetchProjects();
+    } catch (err: any) {
+      showToast(err.message, 'ERROR');
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const handleSearchWorkers = async () => {
+    if (!searchSkill.trim() || searching) return;
+    setSearching(true);
+    try {
+      const res = await fetch(`/api/customer/find-workers?skill=${encodeURIComponent(searchSkill.toLowerCase())}`);
+      if (res.ok) {
+        const data = await res.json();
+        setWorkers(data);
+      }
+    } catch (err: any) {
+      showToast(err.message, 'ERROR');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleAssignWorker = async (workerId: string) => {
+    if (!assigningProjectId || actionPending) return;
+    setAssigningWorkerId(workerId);
+    setActionPending(true);
+    try {
+      const res = await fetch('/api/assignments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          booking_id: assigningProjectId,
+          worker_id: workerId,
+          contractor_id: profileId,
+          remarks: `Assigned to project by Contractor ${user.full_name}`
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to assign worker');
+      }
+
+      showToast('Worker assigned successfully!', 'SUCCESS');
+      setWorkers([]);
+      setAssigningProjectId(null);
+      fetchProjectAssignments(assigningProjectId);
+    } catch (err: any) {
+      showToast(err.message, 'ERROR');
+    } finally {
+      setAssigningWorkerId(null);
+      setActionPending(false);
+    }
+  };
+
+  const handleEndorsementSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!endorseWorkerId || !endorseSkill || submittingEndorsement) return;
+
+    setSubmittingEndorsement(true);
+    try {
+      const res = await fetch(`/api/workers/${endorseWorkerId}/endorsements`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          endorser_id: user.id,
+          skill: endorseSkill,
+          comment: endorseComment
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to submit endorsement');
+      }
+
+      showToast('Contractor skill endorsement submitted successfully!', 'SUCCESS');
+      setEndorseComment('');
+      setEndorseWorkerId('');
+    } catch (err: any) {
+      showToast(err.message, 'ERROR');
+    } finally {
+      setSubmittingEndorsement(false);
+    }
+  };
+
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payingProject || !payAmount || actionPending) return;
+
+    setActionPending(true);
+    try {
+      const res = await fetch(`/api/bookings/${payingProject.id}/payments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: parseFloat(payAmount),
+          confirmation_method: payMethod
+        })
+      });
+
+      if (!res.ok) throw new Error('Payment verification failed.');
+      showToast('Payment settled and confirmed with worker!', 'SUCCESS');
+      setPayingProject(null);
+      fetchProjects();
+    } catch (err: any) {
+      showToast(err.message, 'ERROR');
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const handleRatingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ratingProject || !ratingScore || actionPending) return;
+
+    const asnList = projectAssignments[ratingProject.id] || [];
+    const acceptedAsn = asnList.find(a => a.status === 'ACCEPTED');
+    if (!acceptedAsn) {
+      showToast('No accepted worker on this project to rate!', 'WARNING');
+      return;
+    }
+
+    setActionPending(true);
+    try {
+      const res = await fetch(`/api/bookings/${ratingProject.id}/ratings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rater_id: user.id,
+          ratee_id: acceptedAsn.worker_id,
+          score: ratingScore,
+          comment: ratingComment
+        })
+      });
+
+      if (!res.ok) throw new Error('Rating submission failed.');
+      showToast('Rating review submitted successfully!', 'SUCCESS');
+      setRatingProject(null);
+      setRatingComment('');
+      fetchProjects();
+    } catch (err: any) {
+      showToast(err.message, 'ERROR');
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', padding: '40px', maxWidth: '1100px', margin: '0 auto', gap: '20px', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+        <div className="skeleton-pulse" style={{ width: '100%', height: '140px', borderRadius: '12px' }}></div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '20px' }}>
+          <div className="skeleton-pulse" style={{ height: '240px', borderRadius: '12px' }}></div>
+          <div className="skeleton-pulse" style={{ height: '240px', borderRadius: '12px' }}></div>
+        </div>
+      </div>
+    );
+  }
+
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: <Home size={16} /> },
+    { id: 'projects', label: 'Projects', icon: <Briefcase size={16} /> },
+    { id: 'workers', label: 'Workers', icon: <Users size={16} /> },
+    { id: 'payments', label: 'Payments', icon: <CreditCard size={16} /> },
+    { id: 'profile', label: 'Profile', icon: <Building size={16} /> }
+  ];
+
+  const projectsAttention = projects.filter(p => p.status === 'REQUESTED').length;
+  const workersPendingAssign = engagements.filter(e => e.parent_engagement_id && e.status === 'PENDING').length;
+
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc', color: '#0f172a' }}>
+      
+      {/* SIDEBAR NAVIGATION */}
+      {!isMobile && (
+        <aside style={{
+          width: isSidebarCollapsed ? '72px' : '250px',
+          backgroundColor: '#ffffff',
+          borderRight: '1px solid #e2e8f0',
+          transition: 'width 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'sticky',
+          top: 0,
+          height: '100vh',
+          zIndex: 100
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '24px 20px', borderBottom: '1px solid #f1f5f9', overflow: 'hidden' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: 'rgba(15,118,110,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Building size={20} color="#0f766e" />
+            </div>
+            {!isSidebarCollapsed && (
+              <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f766e', letterSpacing: '-0.03em', fontFamily: 'Outfit, sans-serif' }}>
+                LABOUR<span style={{ color: '#0f172a' }}>LINK</span>
+              </span>
+            )}
+          </div>
+
+          <nav style={{ flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {navItems.map(item => {
+              const active = currentPage === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setCurrentPage(item.id as any)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: active ? 'rgba(15,118,110,0.06)' : 'transparent',
+                    color: active ? '#0f766e' : '#475569',
+                    fontWeight: active ? '700' : '500',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    textAlign: 'left'
+                  }}
+                >
+                  <span style={{ color: active ? '#0f766e' : '#64748b', display: 'flex', alignItems: 'center' }}>{item.icon}</span>
+                  {!isSidebarCollapsed && <span>{item.label}</span>}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div style={{ padding: '12px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: isSidebarCollapsed ? 'center' : 'flex-end' }}>
+            <button
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '6px', borderRadius: '6px' }}
+              aria-label="Toggle Sidebar"
+            >
+              {isSidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            </button>
+          </div>
+        </aside>
+      )}
+
+      {/* BOTTOM NAV BAR */}
+      {isMobile && (
+        <nav style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '60px',
+          backgroundColor: '#ffffff',
+          borderTop: '1px solid #e2e8f0',
+          display: 'flex',
+          justifyContent: 'space-around',
+          alignItems: 'center',
+          zIndex: 999,
+          boxShadow: '0 -2px 10px rgba(0,0,0,0.05)'
+        }}>
+          {navItems.map(item => {
+            const active = currentPage === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setCurrentPage(item.id as any)}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '2px',
+                  background: 'none',
+                  border: 'none',
+                  color: active ? '#0f766e' : '#64748b',
+                  fontSize: '10px',
+                  fontWeight: active ? '700' : '500',
+                  cursor: 'pointer',
+                  padding: '6px'
+                }}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
+
+      {/* MAIN CONTAINER */}
+      <main style={{
+        flex: 1,
+        padding: '32px',
+        paddingBottom: isMobile ? '80px' : '32px',
+        maxWidth: '1100px',
+        margin: '0 auto',
+        width: '100%',
+        boxSizing: 'border-box'
+      }} className="fade-in">
+        
+        {/* PREMIUM HERO SECTION */}
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(15,118,110,0.06) 0%, rgba(37,99,235,0.04) 100%)',
+          border: '1px solid rgba(15,118,110,0.1)',
+          borderRadius: '12px',
+          padding: '24px',
+          marginBottom: '28px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <div style={{ fontSize: '10px', color: '#0f766e', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
+                Corporate Contractor Console
+              </div>
+              <h1 style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', margin: 0, fontFamily: 'Outfit, sans-serif' }}>
+                Welcome, {user.full_name}
+              </h1>
+              <p style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                Manage sub-contracts, staff direct bookings, and attest ratings.
+              </p>
+            </div>
+            
+            {/* Contextual Stats Summary Banners */}
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', textAlign: 'center', boxShadow: 'var(--shadow-sm)' }}>
+                <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>Awaiting Action</span>
+                <span className={`badge ${projectsAttention > 0 ? 'badge-danger' : 'badge-success'}`} style={{ marginTop: '4px', fontSize: '10px' }}>
+                  {projectsAttention} projects
+                </span>
+              </div>
+              <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', textAlign: 'center', boxShadow: 'var(--shadow-sm)' }}>
+                <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>Pending Staffing</span>
+                <span className={`badge ${workersPendingAssign > 0 ? 'badge-warning' : 'badge-neutral'}`} style={{ marginTop: '4px', fontSize: '10px' }}>
+                  {workersPendingAssign} workers
+                </span>
+              </div>
+              <button 
+                onClick={onLogout} 
+                className="btn btn-secondary"
+                style={{ fontSize: '12px', padding: '8px 14px', height: '38px' }}
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+
+          <div style={{ borderTop: '1px solid rgba(15,118,110,0.1)', paddingTop: '12px', display: 'flex', gap: '8px', alignItems: 'center', fontSize: '12px', color: '#475569', flexWrap: 'wrap' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 6px', backgroundColor: '#fee2e2', color: '#dc2626', borderRadius: '4px', fontWeight: '700', fontSize: '10px' }}>
+              <AlertTriangle size={12} /> CRITICAL MONITOR
+            </span>
+            {projectsAttention > 0 ? (
+              <span>Attention required: You have <strong>{projectsAttention} customer project booking offers</strong> awaiting acceptance.</span>
+            ) : (
+              <span>All active customer bookings are accepted. Ready for direct staffing.</span>
+            )}
+            <span style={{ color: '#cbd5e1' }}>|</span>
+            <span>Workers awaiting sub-contract assignment: <strong style={{ color: '#d97706' }}>{workersPendingAssign} pending</strong></span>
+          </div>
+        </div>
+
+        {/* 1. DASHBOARD VIEW */}
+        {currentPage === 'dashboard' && (
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.2fr 1fr', gap: '24px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div className="card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', height: 'fit-content', margin: 0 }}>
+                <div style={{ padding: '20px', backgroundColor: 'rgba(15,118,110,0.05)', borderRadius: '8px', border: '1px solid rgba(15,118,110,0.1)' }}>
+                  <span style={{ fontSize: '11px', color: '#0f766e', fontWeight: '700', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>TOTAL PROJECTS</span>
+                  <span style={{ fontSize: '36px', fontWeight: '900', color: '#0f766e', fontFamily: 'Outfit, sans-serif' }}>{projects.length}</span>
+                </div>
+                <div style={{ padding: '20px', backgroundColor: 'rgba(37,99,235,0.05)', borderRadius: '8px', border: '1px solid rgba(37,99,235,0.1)' }}>
+                  <span style={{ fontSize: '11px', color: '#2563eb', fontWeight: '700', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>STAFFED ROLES</span>
+                  <span style={{ fontSize: '36px', fontWeight: '900', color: '#2563eb', fontFamily: 'Outfit, sans-serif' }}>
+                    {Object.values(projectAssignments).flat().length}
+                  </span>
+                </div>
+              </div>
+
+              {projectsAttention > 0 && (
+                <div className="card" style={{ borderLeft: '4px solid #e11d48', margin: 0, backgroundColor: '#fff5f5' }}>
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#be123c', fontWeight: '700' }}>⚠️ CUSTOMER ACTION REQUIRED</h4>
+                  <p style={{ fontSize: '12px', color: '#475569' }}>Accept customer bookings to begin staffing certified builders.</p>
+                  <button onClick={() => setCurrentPage('projects')} className="btn btn-danger" style={{ marginTop: '10px', fontSize: '11px', padding: '6px 12px' }}>Review Bookings</button>
+                </div>
+              )}
+            </div>
+
+            <div className="card" style={{ margin: 0 }}>
+              <ActivityTimeline userId={user.id} />
+            </div>
+          </div>
+        )}
+
+        {/* 2. PROJECTS VIEW */}
+        {currentPage === 'projects' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <section className="card">
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', color: '#0f172a', fontWeight: '700' }}>🤝 ACTIVE CONTRACTS & STAFFING</h3>
+              {engagements.filter(e => !e.parent_engagement_id).length === 0 ? (
+                <div style={{ padding: '24px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>📂</div>
+                  <strong style={{ display: 'block', fontSize: '13px', color: '#0f172a' }}>No Active Parent Contracts Found</strong>
+                  <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 12px 0' }}>Engagements appear here once a customer accepts contractor bids.</p>
+                  <button onClick={() => setCurrentPage('dashboard')} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '11px' }}>Back to Dashboard Overview</button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {engagements.filter(e => !e.parent_engagement_id).map((eng) => {
+                    const subs = engagements.filter(sub => sub.parent_engagement_id === eng.id);
+
+                    return (
+                      <div key={eng.id} style={{ padding: '18px', border: '1px solid #e2e8f0', borderRadius: '10px', backgroundColor: '#f8fafc' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
+                          <div>
+                            <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '600' }}>ENGAGEMENT ID: {eng.id.slice(0, 8)}...</span>
+                            <h4 style={{ margin: '4px 0 0 0', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>Client: {eng.initiator_name} (VIA_CONTRACTOR Mode)</h4>
+                            <p style={{ margin: '6px 0', fontSize: '12px', color: '#475569' }}>Scope of Work: <strong>"{eng.request_text}"</strong></p>
+                          </div>
+                          <span className={`badge ${eng.status === 'COMPLETED' ? 'badge-success' : (eng.status === 'IN_PROGRESS' ? 'badge-warning' : 'badge-neutral')}`}>
+                            {eng.status}
+                          </span>
+                        </div>
+
+                        <div style={{ marginTop: '14px', padding: '14px', backgroundColor: 'rgba(37,99,235,0.04)', borderRadius: '8px', border: '1px solid rgba(37,99,235,0.08)' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '700', color: '#1e40af', display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Staffed Workers (sub-contracts):</span>
+                          {subs.length === 0 ? (
+                            <div style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic' }}>No workers staffed yet.</div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              {subs.map(sub => (
+                                <div key={sub.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', backgroundColor: '#ffffff', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                  <span style={{ fontWeight: '600', color: '#0f172a' }}>👤 {sub.counterparty_name}</span>
+                                  <span style={{ fontSize: '11px', fontWeight: '700', color: sub.status === 'COMPLETED' ? '#059669' : '#d97706' }}>{sub.status} (₹{sub.offers?.[0]?.amount || 500})</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{ marginTop: '14px', display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                          {(eng.status === 'ACCEPTED' || eng.status === 'IN_PROGRESS') && (
+                            <button onClick={() => { setAssigningProjectId(eng.id); setSearchSkill('mason'); setWorkers([]); setCurrentPage('workers'); }} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '11px' }}>
+                              ➕ Staff Worker (Assign Sub-Contract)
+                            </button>
+                          )}
+                          {eng.status === 'ACCEPTED' && (
+                            <button onClick={() => handleUpdateEngagementStatus(eng.id, 'IN_PROGRESS')} className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '11px' }} disabled={actionPending}>Start Work</button>
+                          )}
+                          {eng.status === 'IN_PROGRESS' && (
+                            <button onClick={() => handleUpdateEngagementStatus(eng.id, 'COMPLETED')} className="btn btn-accent" style={{ padding: '6px 12px', fontSize: '11px' }} disabled={actionPending}>Mark Completed</button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            <div className="card">
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', color: '#0f172a', fontWeight: '700' }}>CUSTOMER PROJECT BOOKINGS</h3>
+              {projects.length === 0 ? (
+                <div style={{ padding: '40px', textAlign: 'center', border: '2px dashed #cbd5e1', borderRadius: '12px', color: '#64748b' }}>No project bookings received yet.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {projects.map((p) => {
+                    const asnList = projectAssignments[p.id] || [];
+                    return (
+                      <div key={p.id} style={{ padding: '18px', border: '1px solid #e2e8f0', borderRadius: '10px', backgroundColor: '#ffffff' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '10px' }}>
+                          <div>
+                            <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500' }}>Project ID: {p.id.slice(0, 8)}...</span>
+                            <h4 style={{ margin: '4px 0 0 0', fontSize: '14px', fontWeight: '700', color: '#0f766e' }}>Customer: {p.customer_name}</h4>
+                          </div>
+                          <span className={`badge ${p.status === 'COMPLETED' ? 'badge-success' : (p.status === 'ACCEPTED' || p.status === 'IN_PROGRESS' ? 'badge-warning' : 'badge-neutral')}`}>{p.status}</span>
+                        </div>
+                        <p style={{ margin: '8px 0', fontSize: '13px', color: '#475569', backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', borderLeft: '3px solid #0f766e' }}>
+                          Requirement: <strong>"{p.requirement_text}"</strong>
+                        </p>
+
+                        <div style={{ marginTop: '12px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.02em', display: 'block', marginBottom: '6px' }}>Assigned Workers:</span>
+                          {asnList.length === 0 ? (
+                            <div style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>No workers assigned.</div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              {asnList.map(a => (
+                                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', backgroundColor: '#f8fafc', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                  <span style={{ fontWeight: '600' }}>👤 {a.worker_name}</span>
+                                  <span className={`badge ${a.status === 'ACCEPTED' ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '9px' }}>{a.status}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px', borderTop: '1px solid #f1f5f9', paddingTop: '12px', flexWrap: 'wrap' }}>
+                          {p.status === 'REQUESTED' && (
+                            <button onClick={() => handleAcceptProject(p.id)} className="btn btn-primary" style={{ padding: '8px 14px', fontSize: '11px' }} disabled={actionPending}>Accept Project</button>
+                          )}
+                          {p.status === 'ACCEPTED' && (
+                            <button onClick={() => handleStartProject(p.id)} className="btn btn-accent" style={{ padding: '8px 14px', fontSize: '11px' }} disabled={actionPending}>Start Project Work</button>
+                          )}
+                          {p.status === 'IN_PROGRESS' && (
+                            <button onClick={() => handleCompleteProject(p.id)} className="btn btn-primary" style={{ padding: '8px 14px', fontSize: '11px', backgroundColor: '#059669' }} disabled={actionPending}>Complete Project</button>
+                          )}
+                          {p.status === 'COMPLETED' && (
+                            <>
+                              <button onClick={() => setPayingProject(p)} className="btn btn-primary" style={{ padding: '8px 14px', fontSize: '11px', backgroundColor: '#2563eb' }}>💸 Pay Worker</button>
+                              <button onClick={() => setRatingProject(p)} className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: '11px' }}>⭐ Rate Worker</button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 3. WORKERS VIEW */}
+        {currentPage === 'workers' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div className="card" style={{ borderLeft: '4px solid #2563eb' }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>⭐ Top Rated Worker Recommendation</h4>
+              <div style={{ padding: '14px 16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                <div>
+                  <strong style={{ color: '#0f172a', fontSize: '13px' }}>Aarav Kumar</strong>
+                  <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '2px' }}>Skill: Plumber, Mason | Trust Score Index: 85% Verified</span>
+                </div>
+                <button onClick={() => { setSearchSkill('mason'); handleSearchWorkers(); }} className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '11px' }}>Lookup Aarav Profile</button>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', color: '#0f172a', fontWeight: '700' }}>Search Available Workers & Staff Invitation</h3>
+              
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Target Project to staff</label>
+                  <select value={assigningProjectId || ''} onChange={e => setAssigningProjectId(e.target.value || null)} className="form-control" style={{ padding: '9px 12px' }}>
+                    <option value="">-- Choose Project --</option>
+                    {projects.map(p => (
+                      <option key={p.id} value={p.id}>{p.customer_name}'s Booking ({p.requirement_text.slice(0, 30)}...)</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ width: '200px', minWidth: '150px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Skill Category</label>
+                  <select value={searchSkill} onChange={e => setSearchSkill(e.target.value)} className="form-control" style={{ padding: '9px 12px' }}>
+                    <option value="mason">Mason (राजमिस्त्री)</option>
+                    <option value="plumber">Plumber (नलसाज)</option>
+                    <option value="electrician">Electrician (बिजली मिस्त्री)</option>
+                    <option value="painter">Painter (रंगसाज)</option>
+                    <option value="carpenter">Carpenter (बढ़ई)</option>
+                    <option value="laborer">General Helper (मजदूर)</option>
+                  </select>
+                </div>
+                <button onClick={handleSearchWorkers} disabled={searching} className="btn btn-primary" style={{ alignSelf: 'flex-end', height: '39px', padding: '0 20px' }}>
+                  {searching ? 'Searching...' : 'Search'}
+                </button>
+              </div>
+
+              {workers.length === 0 ? (
+                <div style={{ padding: '32px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '28px', marginBottom: '8px' }}>🔍</div>
+                  <strong style={{ display: 'block', fontSize: '13px', color: '#0f172a' }}>No Staff Searches Executed Yet</strong>
+                  <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 14px 0' }}>Select a target customer booking project and skill above to filter available workers.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px', borderTop: '1px solid #cbd5e1', paddingTop: '16px' }}>
+                  {workers.map(w => (
+                    <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', border: '1px solid #e2e8f0', borderRadius: '8px', backgroundColor: '#f8fafc', gap: '12px' }}>
+                      <div>
+                        <strong style={{ color: '#0f172a' }}>{w.full_name}</strong>
+                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Trust Score: {w.trust_score}% | Skills: {w.skills.join(', ')}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => handleAssignWorker(w.id)} className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '11px' }} disabled={assigningWorkerId === w.id || !assigningProjectId || actionPending}>
+                          {assigningWorkerId === w.id ? 'Assigning...' : 'Assign Direct'}
+                        </button>
+                        <button onClick={() => handleStaffWorker(w.user_id)} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '11px' }} disabled={!assigningProjectId || actionPending}>
+                          Send Staff Invitation
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="card">
+              <h3 style={{ margin: '0 0 8px 0', fontSize: '15px', color: '#0f172a', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}><Award size={18} color="#0f766e" /> Submit Worker Skill Endorsement</h3>
+              <p style={{ margin: '0 0 18px 0', fontSize: '12px', color: '#64748b' }}>Endorse workers who have completed work for you. Endorsements significantly raise the worker's Trust Score index.</p>
+              
+              <form onSubmit={handleEndorsementSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
+                  <div>
+                    <label className="form-label">Worker ID (or Phone Number)</label>
+                    <input type="text" placeholder="e.g. worker_profile_uuid" value={endorseWorkerId} onChange={e => setEndorseWorkerId(e.target.value)} className="form-control" required />
+                  </div>
+                  <div>
+                    <label className="form-label">Endorsed Skill</label>
+                    <select value={endorseSkill} onChange={e => setEndorseSkill(e.target.value)} className="form-control">
+                      <option value="mason">Mason (राजमिस्त्री)</option>
+                      <option value="plumber">Plumber (नलसाज)</option>
+                      <option value="electrician">Electrician (बिजली मिस्त्री)</option>
+                      <option value="painter">Painter (रंगसाज)</option>
+                      <option value="carpenter">Carpenter (बढ़ई)</option>
+                      <option value="laborer">General Helper (मजदूर)</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="form-label">Attestation / Comment</label>
+                  <textarea placeholder="e.g. Excellent masonry work, on time and high quality finishing..." value={endorseComment} onChange={e => setEndorseComment(e.target.value)} className="form-control" style={{ minHeight: '60px', resize: 'vertical' }} required />
+                </div>
+                <button type="submit" disabled={submittingEndorsement} className="btn btn-primary" style={{ width: 'fit-content' }}>
+                  {submittingEndorsement ? 'Submitting...' : 'Submit Official Endorsement'}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* 4. PAYMENTS VIEW */}
+        {currentPage === 'payments' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div className="card">
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', color: '#0f172a', fontWeight: '700' }}>Completed Worker Payouts Ledger</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {projects.filter(p => p.payment_amount).length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '12px' }}>No payouts made yet.</div>
+                ) : (
+                  projects.filter(p => p.payment_amount).map(p => (
+                    <div key={p.id} style={{ padding: '12px 16px', border: '1px solid #e2e8f0', borderRadius: '8px', backgroundColor: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                      <div>
+                        <strong style={{ color: '#0f172a' }}>Worker Payout ID: {p.id.slice(0, 8)}...</strong>
+                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Status: {p.payment_status} | Method: UPI</div>
+                      </div>
+                      <span style={{ fontSize: '15px', fontWeight: '800', color: '#ef4444', fontFamily: 'Outfit, sans-serif' }}>- Rs. {p.payment_amount}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', color: '#0f172a', fontWeight: '700' }}>Active Price Negotiations</h3>
+              {engagements.filter(e => !e.parent_engagement_id).length === 0 ? (
+                <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '12px' }}>No active proposals or negotiations.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {engagements.filter(e => !e.parent_engagement_id).map(eng => {
+                    const lastOffer = eng.offers && eng.offers[0];
+                    const isPendingOrNegotiating = eng.status === 'PENDING' || eng.status === 'NEGOTIATING';
+                    const lastOfferedByMe = lastOffer && lastOffer.offered_by === user.id;
+
+                    return (
+                      <div key={eng.id} style={{ padding: '16px', border: '1px solid #e2e8f0', borderRadius: '8px', backgroundColor: '#f8fafc' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                          <div>
+                            <strong style={{ color: '#0f172a' }}>Client: {eng.initiator_name}</strong>
+                            <p style={{ margin: '4px 0', fontSize: '12px', color: '#475569' }}>Requirement: "{eng.request_text}"</p>
+                            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Last Offer: ₹{lastOffer?.amount || 1500}</span>
+                          </div>
+                          <span className="badge badge-neutral" style={{ fontSize: '9px' }}>{eng.status}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                          {isPendingOrNegotiating && !lastOfferedByMe && (
+                            <>
+                              <button onClick={() => handleRespondToProposal(eng.id, 'ACCEPTED')} className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '11px' }} disabled={actionPending}>Accept Offer (₹{lastOffer?.amount})</button>
+                              <button onClick={() => handleRespondToProposal(eng.id, 'REJECTED')} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '11px', color: '#e11d48' }} disabled={actionPending}>Reject</button>
+                            </>
+                          )}
+                          {isPendingOrNegotiating && (
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                              <input type="number" placeholder="Counter offer price" value={counterProposalAmount[eng.id] || ''} onChange={e => setCounterProposalAmount({ ...counterProposalAmount, [eng.id]: e.target.value })} className="form-control" style={{ width: '130px', padding: '6px 10px', fontSize: '11px' }} />
+                              <button onClick={() => handleProposePriceOffer(eng.id)} className="btn btn-primary" style={{ padding: '8px 12px', fontSize: '11px' }} disabled={actionPending}>Counter</button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 5. PROFILE VIEW */}
+        {currentPage === 'profile' && (
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1.2fr', gap: '24px' }}>
+            <div className="card">
+              <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>Company Details</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px', color: '#475569' }}>
+                <div>
+                  <span style={{ fontSize: '10px', color: '#94a3b8', display: 'block', fontWeight: '700', letterSpacing: '0.05em' }}>CONTRACTOR NAME</span>
+                  <strong style={{ color: '#0f172a' }}>{user.full_name}</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: '10px', color: '#94a3b8', display: 'block', fontWeight: '700', letterSpacing: '0.05em' }}>PHONE NUMBER</span>
+                  <strong style={{ color: '#0f172a' }}>{user.phone}</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: '10px', color: '#94a3b8', display: 'block', fontWeight: '700', letterSpacing: '0.05em' }}>EMAIL ADDRESS</span>
+                  <strong style={{ color: '#0f172a' }}>{user.email || 'None Registered'}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div className="card">
+              <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>Active Logged Session Details</h4>
+              <ActivityTimeline userId={user.id} />
+            </div>
+          </div>
+        )}
+
+      </main>
+
+      {/* Pay Worker Modal */}
+      {payingProject && (
+        <div style={backdropStyle}>
+          <div style={modalStyle}>
+            <div style={{ padding: '20px', borderBottom: '1px solid #cbd5e1' }}>
+              <h3 style={{ margin: 0, fontSize: '15px', color: '#0f172a', fontWeight: '700' }}>Pay Worker</h3>
+            </div>
+            <form onSubmit={handlePaymentSubmit}>
+              <div style={{ padding: '20px' }}>
+                <div className="form-group">
+                  <label className="form-label">Payment Amount (Rs.)</label>
+                  <input type="number" className="form-control" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Payment Channel</label>
+                  <select className="form-control" value={payMethod} onChange={(e) => setPayMethod(e.target.value as any)}>
+                    <option value="UPI_VERIFIED">UPI Transaction</option>
+                    <option value="CASH_ATTESTED">Cash Hand-to-Hand</option>
+                    <option value="BANK_VERIFIED">Bank Transfer</option>
+                  </select>
+                </div>
+              </div>
+              <div style={modalFooterStyle}>
+                <button type="button" onClick={() => setPayingProject(null)} className="btn btn-secondary" style={{ fontSize: '12px' }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ fontSize: '12px' }} disabled={actionPending}>Attest Payment</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Rate Worker Modal */}
+      {ratingProject && (
+        <div style={backdropStyle}>
+          <div style={modalStyle}>
+            <div style={{ padding: '20px', borderBottom: '1px solid #cbd5e1' }}>
+              <h3 style={{ margin: 0, fontSize: '15px', color: '#0f172a', fontWeight: '700' }}>Rate Worker Performance</h3>
+            </div>
+            <form onSubmit={handleRatingSubmit}>
+              <div style={{ padding: '20px' }}>
+                <div className="form-group">
+                  <label className="form-label">Score (1 to 5 Stars)</label>
+                  <select className="form-control" value={ratingScore} onChange={(e) => setRatingScore(parseInt(e.target.value))}>
+                    <option value={5}>5 Stars - Excellent</option>
+                    <option value={4}>4 Stars - Good</option>
+                    <option value={3}>3 Stars - Average</option>
+                    <option value={2}>2 Stars - Poor</option>
+                    <option value={1}>1 Star - Very Poor</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Comments</label>
+                  <textarea className="form-control" value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} style={{ minHeight: '60px' }} required />
+                </div>
+              </div>
+              <div style={modalFooterStyle}>
+                <button type="button" onClick={() => setRatingProject(null)} className="btn btn-secondary" style={{ fontSize: '12px' }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ fontSize: '12px' }} disabled={actionPending}>Submit Rating</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Toast Notification Container */}
+      <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 10000, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {toasts.map(t => (
+          <div key={t.id} style={{
+            padding: '12px 16px',
+            borderRadius: '8px',
+            boxShadow: 'var(--shadow-lg)',
+            fontSize: '13px',
+            fontWeight: '600',
+            backgroundColor: '#ffffff',
+            borderLeft: `4px solid ${t.type === 'SUCCESS' ? '#0f766e' : t.type === 'ERROR' ? '#e11d48' : t.type === 'WARNING' ? '#d97706' : '#2563eb'}`,
+            color: '#0f172a',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            border: '1px solid #cbd5e1'
+          }}>
+            <span>{t.type === 'SUCCESS' ? '✓' : t.type === 'ERROR' ? '⚠️' : 'ℹ️'}</span>
+            <span>{t.message}</span>
+          </div>
+        ))}
+      </div>
+
+    </div>
+  );
+};
+
+const backdropStyle: React.CSSProperties = {
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(15, 23, 42, 0.4)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 999
+};
+
+const modalStyle: React.CSSProperties = {
+  backgroundColor: '#ffffff',
+  width: '90%',
+  maxWidth: '420px',
+  borderRadius: '12px',
+  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+  overflow: 'hidden',
+  border: '1px solid #e2e8f0'
+};
+
+const modalFooterStyle: React.CSSProperties = {
+  padding: '14px 20px',
+  backgroundColor: '#f8fafc',
+  borderTop: '1px solid #cbd5e1',
+  display: 'flex',
+  justifyContent: 'flex-end',
+  gap: '8px'
+};
+
+export default ContractorDashboard;

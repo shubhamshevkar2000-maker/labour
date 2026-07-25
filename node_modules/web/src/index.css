@@ -1,0 +1,364 @@
+/* LabourLink Central CSS — Banking/Government Design System */
+
+:root {
+  /* Colors */
+  --primary-color: #005f5f;       /* Official Government Teal */
+  --primary-hover: #004d4d;
+  --secondary-color: #334155;     /* Slate */
+  --accent-color: #d97706;        /* Amber */
+  --success-color: #16a34a;       /* Green */
+  --error-color: #dc2626;         /* Red */
+  --background-color: #f1f5f9;    /* Light Slate Grey */
+  --surface-color: #ffffff;
+  --border-color: #cbd5e1;        /* Solid Grey Border */
+  --text-primary: #0f172a;        /* Deep Slate Blue */
+  --text-secondary: #475569;      /* Muted Slate */
+  --text-white: #ffffff;
+  
+  /* Trust Score Scales */
+  --trust-high: #16a34a;          /* Green */
+  --trust-medium: #d97706;        /* Amber */
+  --trust-low: #dc2626;           /* Red */
+  --trust-unestablished: #94a3b8;  /* Muted Grey */
+
+  /* Spacing */
+  --border-radius: 4px;           /* Strict, formal border radius */
+}
+
+/* Reset and Core Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-primary);
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: bold;
+  color: var(--secondary-color);
+}
+
+a {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
+
+/* Layout Elements */
+.header-bar {
+  background-color: var(--primary-color);
+  color: var(--text-white);
+  padding: 12px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 3px solid var(--accent-color);
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: var(--text-white);
+}
+
+.header-meta {
+  font-size: 0.85rem;
+  opacity: 0.9;
+  text-align: right;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+
+.footer {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  border-top: 1px solid var(--border-color);
+  margin-top: 48px;
+  background: var(--surface-color);
+}
+
+/* Common UI Components */
+.card {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.card-title {
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+  font-size: 1.1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Forms and Buttons */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+}
+
+.form-control {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  background-color: #ffffff;
+}
+
+.form-control:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--border-radius);
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color 0.1s ease;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: var(--text-white);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.btn-secondary {
+  background-color: #e2e8f0;
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.btn-secondary:hover {
+  background-color: #cbd5e1;
+}
+
+.btn-accent {
+  background-color: var(--accent-color);
+  color: var(--text-white);
+}
+
+.btn-accent:hover {
+  background-color: #c2410c;
+}
+
+.btn-danger {
+  background-color: var(--error-color);
+  color: var(--text-white);
+}
+
+.btn-danger:hover {
+  background-color: #b91c1c;
+}
+
+/* Tables */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.table th, .table td {
+  border: 1px solid var(--border-color);
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.table th {
+  background-color: #f8fafc;
+  font-weight: bold;
+  color: var(--secondary-color);
+}
+
+.table tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+/* Badges and Indicators */
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: bold;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+
+.badge-success {
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.badge-warning {
+  background-color: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.badge-danger {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.badge-neutral {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+/* Availability Styles */
+.status-available { color: var(--success-color); font-weight: bold; }
+.status-busy { color: var(--accent-color); font-weight: bold; }
+.status-unavailable { color: var(--text-secondary); font-weight: bold; }
+
+/* Grid Layouts */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+
+.grid-aside {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .grid-2, .grid-3, .grid-aside {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Alert Notification Panel */
+.alert-banner {
+  padding: 12px 16px;
+  border-radius: var(--border-radius);
+  margin-bottom: 20px;
+  border-left: 4px solid transparent;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.alert-banner-info {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-left-color: #3b82f6;
+  color: #1e3a8a;
+}
+
+.alert-banner-warning {
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  border-left-color: var(--accent-color);
+  color: #78350f;
+}
+
+.alert-banner-error {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-left-color: var(--error-color);
+  color: #7f1d1d;
+}
+
+/* Custom styles for official elements */
+.seal-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background-color: #f8fafc;
+  border: 1px dashed var(--border-color);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.stamp {
+  border: 2px solid var(--primary-color);
+  color: var(--primary-color);
+  padding: 4px 8px;
+  font-weight: bold;
+  text-transform: uppercase;
+  transform: rotate(-3deg);
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+.stamp-verified {
+  border-color: var(--success-color);
+  color: var(--success-color);
+}
+.stamp-disputed {
+  border-color: var(--error-color);
+  color: var(--error-color);
+}
+.stamp-pending {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+/* Details list alignment */
+.details-list dt {
+  font-weight: bold;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.details-list dd {
+  margin-bottom: 12px;
+  font-size: 14px;
+}
