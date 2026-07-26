@@ -216,7 +216,7 @@ async function seed() {
   const req1Id = uuidv4();
   db.run(`
     INSERT INTO job_requirements (id, contractor_id, raw_text, extracted_skills, lat, lng, radius_km, headcount, min_trust_score, pay_min, pay_max, urgency_window_start, urgency_window_end, extracted_by_agent_run_id, created_at)
-    VALUES (?, ?, 'Need a skilled mason for plastering a building in central Delhi, near Connaught Place.', ?, 28.6139, 77.2090, 10, 1, 80, 500, 800, ?, ?, ?, ?)
+    VALUES (?, ?, 'Need a skilled mason for plastering a building in central Delhi, near Connaught Place.', ?, 28.6139, 77.2090, 10, 1, 75, 500, 800, ?, ?, ?, ?)
   `, [
     req1Id, contractors[0].id, JSON.stringify(['mason']), 
     pastStr(20), pastStr(18), seedAgentRunId, pastStr(20)

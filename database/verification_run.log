@@ -1,8 +1,8 @@
-Database path: C:\Users\QUIKCARE COMPUTERS\Desktop\labourlink\labourlink\database\labourlink_db.json
-Total users count: 12
-Total customer_profiles count: 3
+Database path: C:\Users\QUIKCARE COMPUTERS\Desktop\labourlink\labourlink\apps\api\database\labourlink_db.json
+Total users count: 28
+Total customer_profiles count: 12
 Total contractor_profiles count: 3
-Total worker_profiles count: 5
+Total worker_profiles count: 12
 Total skills_taxonomy count: 11
 Generic SELECT parser correctly evaluated row 1 (second user) independently: SUCCESS
 Login lookup query can find users beyond the first record: SUCCESS
